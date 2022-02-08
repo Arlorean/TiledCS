@@ -243,46 +243,48 @@ namespace TiledCS
                 if (attrOffsetY != null) tiledLayer.offsetY = double.Parse(attrOffsetY.Value);
                 if (nodesProperty != null) tiledLayer.properties = ParseProperties(nodesProperty);
 
+                var infiniteWidth = 0;
+                var infiniteHeight = 0;
+                foreach (XmlNode child in nodeData.ChildNodes)
+                {
+                    if (child.Name == "chunk")
+                        {
+                        infiniteWidth = Math.Max(infiniteWidth, int.Parse(child.Attributes["x"].Value) + int.Parse(child.Attributes["width"].Value));
+                        infiniteHeight = Math.Max(infiniteHeight, int.Parse(child.Attributes["y"].Value) + int.Parse(child.Attributes["height"].Value));
+                    }
+                }
+                if (infiniteWidth != 0 && infiniteHeight != 0)
+                {
+                    tiledLayer.width = infiniteWidth;
+                    tiledLayer.height = infiniteHeight;
+                    tiledLayer.data = new int[tiledLayer.width * tiledLayer.height];
+                    tiledLayer.dataRotationFlags = new byte[tiledLayer.width * tiledLayer.height];
+                }
+
                 if (encoding == "csv")
                 {
-                    var csvs = nodeData.InnerText.Split(',');
-
-                    tiledLayer.data = new int[csvs.Length];
-                    tiledLayer.dataRotationFlags = new byte[csvs.Length];
-
-                    // Parse the comma separated csv string and update the inner data as well as the data rotation flags
-                    for (var i = 0; i < csvs.Length; i++)
+                    if (infiniteWidth != 0 && infiniteHeight != 0)
                     {
-                        var rawID = uint.Parse(csvs[i]);
-                        var hor = ((rawID & FLIPPED_HORIZONTALLY_FLAG));
-                        var ver = ((rawID & FLIPPED_VERTICALLY_FLAG));
-                        var dia = ((rawID & FLIPPED_DIAGONALLY_FLAG));
-                        tiledLayer.dataRotationFlags[i] = (byte)((hor | ver | dia) >> SHIFT_FLIP_FLAG_TO_BYTE);
+                        foreach (XmlNode child in nodeData.ChildNodes)
+                        {
+                            if (child.Name == "chunk")
+                            {
+                                LoadCsvChunk(child.InnerText, tiledLayer, int.Parse(child.Attributes["x"].Value), int.Parse(child.Attributes["y"].Value), int.Parse(child.Attributes["width"].Value), int.Parse(child.Attributes["height"].Value));
+                            }
+                        }
 
-                        // assign data to rawID with the rotation flags cleared
-                        tiledLayer.data[i] = (int)(rawID & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG));
+                    }
+                    else
+                    {
+                        LoadCsvChunk(nodeData.InnerText, tiledLayer);
                     }
                 }
                 else if (encoding == "base64")
                 {
                     var compression = nodeData.Attributes["compression"]?.Value;
 
-                    var infiniteWidth = 0;
-                    var infiniteHeight = 0;
-                    foreach (XmlNode child in nodeData.ChildNodes)
-                    {
-                        if (child.Name == "chunk")
-                        {
-                            infiniteWidth = Math.Max(infiniteWidth, int.Parse(child.Attributes["x"].Value) + int.Parse(child.Attributes["width"].Value));
-                            infiniteHeight = Math.Max(infiniteHeight, int.Parse(child.Attributes["y"].Value) + int.Parse(child.Attributes["height"].Value));
-                        }
-                    }
                     if (infiniteWidth != 0 && infiniteHeight != 0)
                     {
-                        tiledLayer.width = infiniteWidth;
-                        tiledLayer.height = infiniteHeight;
-                        tiledLayer.data = new int[tiledLayer.width * tiledLayer.height];
-                        tiledLayer.dataRotationFlags = new byte[tiledLayer.width * tiledLayer.height];
                         foreach (XmlNode child in nodeData.ChildNodes)
                         {
                             if (child.Name == "chunk")
@@ -362,6 +364,33 @@ namespace TiledCS
             }
 
             return result.ToArray();
+        }
+
+        static void LoadCsvChunk(string innerText, TiledLayer tiledLayer, int x = 0, int y = 0, int width = 0, int height = 0) {
+            var csvs = innerText.Split(',');
+            if (csvs.Length == 1 && string.IsNullOrWhiteSpace(csvs[0])) {
+                csvs = new string[0];
+            }
+
+            var dataRotationFlagsList = new List<byte>(csvs.Length);
+            var layerDataList = new List<int>(csvs.Length);
+
+            //tiledLayer.data = new int[csvs.Length];
+            //tiledLayer.dataRotationFlags = new byte[csvs.Length];
+
+            // Parse the comma separated csv string and update the inner data as well as the data rotation flags
+            for (var i = 0; i < csvs.Length; i++) {
+                var rawID = uint.Parse(csvs[i].Trim());
+                var hor = ((rawID & FLIPPED_HORIZONTALLY_FLAG));
+                var ver = ((rawID & FLIPPED_VERTICALLY_FLAG));
+                var dia = ((rawID & FLIPPED_DIAGONALLY_FLAG));
+                dataRotationFlagsList.Add((byte)((hor | ver | dia) >> SHIFT_FLIP_FLAG_TO_BYTE));
+
+                // assign data to rawID with the rotation flags cleared
+                layerDataList.Add((int)(rawID & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG)));
+            }
+
+            AddChunk(tiledLayer, layerDataList, dataRotationFlagsList, x, y, width, height);
         }
 
         static void LoadChunk(string innerText, TiledLayer tiledLayer, string compression, int x = 0, int y = 0, int width = 0, int height = 0)
