@@ -543,7 +543,7 @@ namespace TiledCS
 
                 if (node.Attributes["rotation"] != null)
                 {
-                    obj.rotation = int.Parse(node.Attributes["rotation"].Value);
+                    obj.rotation = float.Parse(node.Attributes["rotation"].Value);
                 }
 
                 result.Add(obj);
