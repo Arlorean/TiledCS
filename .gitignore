@@ -6,3 +6,4 @@ obj/
 out/
 *.nupkg
 *.meta
+*.bak
