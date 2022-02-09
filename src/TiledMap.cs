@@ -322,6 +322,7 @@ namespace TiledCS
                 var tiledLayer = new TiledLayer();
                 tiledLayer.id = int.Parse(node.Attributes["id"].Value);
                 tiledLayer.name = node.Attributes["name"].Value;
+                tiledLayer.color = node.Attributes["color"]?.Value;
                 tiledLayer.objects = ParseObjects(nodesObject);
                 tiledLayer.type = "objectgroup";
                 tiledLayer.visible = true;
