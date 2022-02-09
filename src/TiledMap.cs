@@ -371,13 +371,11 @@ namespace TiledCS
             var csvs = innerText.Split(',');
             if (csvs.Length == 1 && string.IsNullOrWhiteSpace(csvs[0])) {
                 csvs = new string[0];
+                return;
             }
 
             var dataRotationFlagsList = new List<byte>(csvs.Length);
             var layerDataList = new List<int>(csvs.Length);
-
-            //tiledLayer.data = new int[csvs.Length];
-            //tiledLayer.dataRotationFlags = new byte[csvs.Length];
 
             // Parse the comma separated csv string and update the inner data as well as the data rotation flags
             for (var i = 0; i < csvs.Length; i++) {
