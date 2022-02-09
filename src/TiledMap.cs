@@ -782,7 +782,15 @@ namespace TiledCS
         /// <returns>True if the tile was flipped horizontally or False if not</returns>
         public bool IsTileFlippedHorizontal(TiledLayer layer, int dataIndex)
         {
-            return (layer.dataRotationFlags[dataIndex] & (FLIPPED_HORIZONTALLY_FLAG >> SHIFT_FLIP_FLAG_TO_BYTE)) > 0;
+            return IsTileFlippedHorizontal(layer.dataRotationFlags[dataIndex]);
+        }
+        /// <summary>
+        /// Checks is a tile is flipped horizontally
+        /// </summary>
+        /// <param name="dataRotationFlag">An entry of the TiledLayer.dataRotationFlags array</param>
+        /// <returns>True if the tile was flipped horizontally or False if not</returns>
+        public static bool IsTileFlippedHorizontal(byte dataRotationFlag) {
+            return (dataRotationFlag & (FLIPPED_HORIZONTALLY_FLAG >> SHIFT_FLIP_FLAG_TO_BYTE)) > 0;
         }
         /// <summary>
         /// Checks is a tile is flipped vertically
@@ -803,7 +811,15 @@ namespace TiledCS
         /// <returns>True if the tile was flipped vertically or False if not</returns>
         public bool IsTileFlippedVertical(TiledLayer layer, int dataIndex)
         {
-            return (layer.dataRotationFlags[dataIndex] & (FLIPPED_VERTICALLY_FLAG >> SHIFT_FLIP_FLAG_TO_BYTE)) > 0;
+            return IsTileFlippedVertical(layer.dataRotationFlags[dataIndex]);
+        }
+        /// <summary>
+        /// Checks is a tile is flipped vertically
+        /// </summary>
+        /// <param name="dataRotationFlag">An entry of the TiledLayer.dataRotationFlags array</param>
+        /// <returns>True if the tile was flipped vertically or False if not</returns>
+        public static bool IsTileFlippedVertical(byte dataRotationFlag) {
+            return (dataRotationFlag & (FLIPPED_VERTICALLY_FLAG >> SHIFT_FLIP_FLAG_TO_BYTE)) > 0;
         }
         /// <summary>
         /// Checks is a tile is flipped diagonally
@@ -824,7 +840,15 @@ namespace TiledCS
         /// <returns>True if the tile was flipped diagonally or False if not</returns>
         public bool IsTileFlippedDiagonal(TiledLayer layer, int dataIndex)
         {
-            return (layer.dataRotationFlags[dataIndex] & (FLIPPED_DIAGONALLY_FLAG >> SHIFT_FLIP_FLAG_TO_BYTE)) > 0;
+            return IsTileFlippedDiagonal(layer.dataRotationFlags[dataIndex]);
+        }
+        /// <summary>
+        /// Checks is a tile is flipped diagonally
+        /// </summary>
+        /// <param name="dataRotationFlag">An entry of the TiledLayer.dataRotationFlags array</param>
+        /// <returns>True if the tile was flipped diagonally or False if not</returns>
+        public static bool IsTileFlippedDiagonal(byte dataRotationFlag) {
+            return (dataRotationFlag & (FLIPPED_DIAGONALLY_FLAG >> SHIFT_FLIP_FLAG_TO_BYTE)) > 0;
         }
     }
 }
