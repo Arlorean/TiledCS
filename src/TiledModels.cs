@@ -48,6 +48,10 @@ namespace TiledCS
         /// </summary>
         public string name;
         /// <summary>
+        /// The color used to display the objects in this group. (defaults to gray (“#a0a0a4”))
+        /// </summary>
+        public string color;
+        /// <summary>
         /// Total horizontal tiles
         /// </summary>
         public int width;
@@ -129,7 +133,7 @@ namespace TiledCS
         /// </summary>
         public float y;
         /// <summary>
-        /// The object's rotation
+        /// The rotation of the object in degrees clockwise around (x, y).
         /// </summary>
         public float rotation;
         /// <summary>
@@ -148,6 +152,82 @@ namespace TiledCS
         /// An array of properties. Is null if none were defined.
         /// </summary>
         public TiledProperty[] properties;
+        /// <summary>
+        /// The type of object. "tile" (has gid), "rectangle" (no gid), "point", "ellipse", "polygon", "polyline", "text".
+        /// </summary>
+        public string objectType;
+
+        /// <summary>
+        /// The parameters if the object is of type text.
+        /// </summary>
+        public TiledText text;
+
+        /// <summary>
+        /// The points if the object is of type polygon or polyline.
+        /// </summary>
+        public TiledPoint[] points;
+    }
+
+    public class TiledPoint {
+        /// <summary>
+        /// The x position in pixels
+        /// </summary>
+        public float x;
+        /// <summary>
+        /// The y position in pixels
+        /// </summary>
+        public float y;
+    }
+
+    public class TiledText {
+        /// <summary>
+        /// The text to display
+        /// </summary>
+        public string text;
+        /// <summary>
+        /// The font family used(defaults to “sans-serif”)
+        /// </summary>
+        public string fontfamily;
+        /// <summary>
+        ///  The size of the font in pixels(not using points, because other sizes in the TMX format are also using pixels) (defaults to 16)
+        /// </summary>
+        public int pixelsize;
+        /// <summary>
+        /// Whether word wrapping is enabled(1) or disabled(0). (defaults to 0)
+        /// </summary>
+        public bool wrap;
+        /// <summary>
+        /// Color of the text in #AARRGGBB or #RRGGBB format (defaults to #000000)
+        /// </summary>
+        public string color;
+        /// <summary>
+        /// Whether the font is bold(1) or not(0). (defaults to 0)
+        /// </summary>
+        public bool bold;
+        /// <summary>
+        /// Whether the font is italic(1) or not(0). (defaults to 0)
+        /// </summary>
+        public bool italic;
+        /// <summary>
+        /// Whether a line should be drawn below the text(1) or not(0). (defaults to 0)
+        /// </summary>
+        public bool underline;
+        /// <summary>
+        /// Whether a line should be drawn through the text(1) or not(0). (defaults to 0)
+        /// </summary>
+        public bool strikeout;
+        /// <summary>
+        /// Whether kerning should be used while rendering the text(1) or not(0). (defaults to 1)
+        /// </summary>
+        public bool kerning;
+        /// <summary>
+        /// Horizontal alignment of the text within the object (left, center, right or justify, defaults to left) (since Tiled 1.2.1)
+        /// </summary>
+        public string halign;
+        /// <summary>
+        /// Vertical alignment of the text within the object (top, center or bottom, defaults to top)
+        /// </summary>
+        public string valign;
     }
 
     /// <summary>
