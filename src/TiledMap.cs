@@ -521,7 +521,6 @@ namespace TiledCS
                 obj.id = int.Parse(node.Attributes["id"].Value);
                 obj.name = node.Attributes["name"]?.Value;
                 obj.type = node.Attributes["type"]?.Value;
-                obj.gid = int.Parse(node.Attributes["gid"]?.Value ?? "0");
                 obj.x = float.Parse(node.Attributes["x"].Value, CultureInfo.InvariantCulture);
                 obj.y = float.Parse(node.Attributes["y"].Value, CultureInfo.InvariantCulture);
 
@@ -542,13 +541,73 @@ namespace TiledCS
 
                 if (node.Attributes["rotation"] != null)
                 {
-                    obj.rotation = float.Parse(node.Attributes["rotation"].Value);
+                    obj.rotation = float.Parse(node.Attributes["rotation"].Value, CultureInfo.InvariantCulture);
+                }
+
+                if (node.Attributes["gid"] != null) {
+                    obj.gid = int.Parse(node.Attributes["gid"].Value);
+                    obj.objectType = "tile";
+                }
+                else {
+                    if (node.ChildNodes.Count == 0) {
+                        obj.objectType = "rectangle";
+                    }
+                    if (node.SelectSingleNode("point") != null) {
+                        obj.objectType = "point";
+                    }
+                    if (node.SelectSingleNode("ellipse") != null) {
+                        obj.objectType = "ellipse";
+                    }
+                    if (node.SelectSingleNode("polyline") is XmlNode polyline) {
+                        obj.objectType = "polyline";
+                        obj.points = ParsePolygon(polyline);
+                    }
+                    if (node.SelectSingleNode("polygon") is XmlNode polygon) {
+                        obj.objectType = "polygon";
+                        obj.points = ParsePolygon(polygon);
+                    }
+                    if (node.SelectSingleNode("text") is XmlNode text) {
+                        obj.objectType = "text";
+                        obj.text = ParseText(text);
+                    }
                 }
 
                 result.Add(obj);
             }
 
             return result.ToArray();
+        }
+
+        TiledPoint[] ParsePolygon(XmlNode node) {
+            var pointsAttr = node.Attributes["points"].Value;
+
+            var points = new List<TiledPoint>();
+            var pointStrings = pointsAttr.Split(' ');
+            foreach (var pointString in pointStrings) {
+                var coords = pointString.Split(',');
+                points.Add(new TiledPoint {
+                    x = float.Parse(coords[0], CultureInfo.InvariantCulture),
+                    y = float.Parse(coords[1], CultureInfo.InvariantCulture),
+                });
+            }
+            return points.ToArray();
+        }
+
+        TiledText ParseText(XmlNode node) {
+            var text = new TiledText();
+            text.text = node.InnerText;
+            text.fontfamily = node.Attributes["fontfamily"]?.Value ?? "sans-serif";
+            text.pixelsize = int.Parse(node.Attributes["pixelsize"]?.Value ?? "16");
+            text.wrap = int.Parse(node.Attributes["bold"]?.Value ?? "0") != 0;
+            text.color = node.Attributes["color"]?.Value ?? "#000000";
+            text.bold = int.Parse(node.Attributes["bold"]?.Value ?? "0") != 0;
+            text.italic = int.Parse(node.Attributes["italic"]?.Value ?? "0") != 0;
+            text.underline = int.Parse(node.Attributes["underline"]?.Value ?? "0") != 0;
+            text.strikeout = int.Parse(node.Attributes["strikeout"]?.Value ?? "0") != 0;
+            text.kerning = int.Parse(node.Attributes["kerning"]?.Value ?? "0") != 0;
+            text.halign = node.Attributes["halign"]?.Value ?? "left";
+            text.valign = node.Attributes["valign"]?.Value ?? "top";
+            return text;
         }
 
         /* HELPER METHODS */
