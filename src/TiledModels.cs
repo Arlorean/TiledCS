@@ -29,6 +29,10 @@ namespace TiledCS
         /// </summary>
         public string type;
         /// <summary>
+        /// The custom property type as used in Tiled 1.8+.
+        /// </summary>
+        public string propertytype;
+        /// <summary>
         /// The value in string format
         /// </summary>
         public string value;
@@ -86,7 +90,7 @@ namespace TiledCS
         /// <summary>
         /// An int array of gid numbers which define which tile is being used where. The length of the array equals the layer width * the layer height. Is null when the layer is not a tilelayer.
         /// </summary>
-        public int[] data;
+        public TiledArray<int> data;
         /// <summary>
         /// A parallel array to data which stores the rotation flags of the tile.
         /// Bit 3 is horizontal flip,
@@ -94,7 +98,7 @@ namespace TiledCS
         /// bit 1 is (anti) diagonal flip.
         /// Is null when the layer is not a tilelayer.
         /// </summary>
-        public byte[] dataRotationFlags;
+        public TiledArray<byte> dataRotationFlags;
         /// <summary>
         /// The list of objects in case of an objectgroup layer. Is null when the layer has no objects.
         /// </summary>
@@ -230,11 +234,11 @@ namespace TiledCS
         public string valign;
     }
 
-    /// <summary>
-    /// Represents a tile within a tileset
-    /// </summary>
-    /// <remarks>These are not defined for all tiles within a tileset, only the ones with properties, terrains and animations.</remarks>
-    public class TiledTile
+/// <summary>
+/// Represents a tile within a tileset
+/// </summary>
+/// <remarks>These are not defined for all tiles within a tileset, only the ones with properties, terrains and animations.</remarks>
+public class TiledTile
     {
         /// <summary>
         /// The tile id

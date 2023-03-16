@@ -154,6 +154,7 @@ namespace TiledCS
                 var property = new TiledProperty();
                 property.name = node.Attributes["name"].Value;
                 property.type = node.Attributes["type"]?.Value;
+                property.propertytype = node.Attributes[nameof(property.propertytype)]?.Value;
                 property.value = node.Attributes["value"]?.Value;
 
                 if (property.value == null && node.InnerText != null)
@@ -213,6 +214,11 @@ namespace TiledCS
             return result.ToArray();
         }
 
+        static TiledArray<T> CreateArray<T>(int minX, int minY, int width, int height) {
+            return new TiledArray<T>(minX, minY, width, height);
+            //return (T[,])Array.CreateInstance(typeof(T), new[] { width, height }, new[] { minX, minY });
+        }
+
         private TiledLayer[] ParseLayers(XmlNodeList nodesLayer, XmlNodeList nodesObjectGroup, XmlNodeList nodesImageLayer)
         {
             var result = new List<TiledLayer>();
@@ -243,27 +249,40 @@ namespace TiledCS
                 if (attrOffsetY != null) tiledLayer.offsetY = double.Parse(attrOffsetY.Value);
                 if (nodesProperty != null) tiledLayer.properties = ParseProperties(nodesProperty);
 
-                var infiniteWidth = 0;
-                var infiniteHeight = 0;
+                bool isInfinite = false;
+                int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
                 foreach (XmlNode child in nodeData.ChildNodes)
                 {
                     if (child.Name == "chunk")
-                        {
-                        infiniteWidth = Math.Max(infiniteWidth, int.Parse(child.Attributes["x"].Value) + int.Parse(child.Attributes["width"].Value));
-                        infiniteHeight = Math.Max(infiniteHeight, int.Parse(child.Attributes["y"].Value) + int.Parse(child.Attributes["height"].Value));
+                    {
+                        isInfinite = true;
+                        var x = int.Parse(child.Attributes["x"].Value);
+                        var y = int.Parse(child.Attributes["y"].Value);
+                        var w = int.Parse(child.Attributes["width"].Value);
+                        var h = int.Parse(child.Attributes["height"].Value);
+                        minX = Math.Min(minX, x);
+                        minY = Math.Min(minY, y);
+                        maxX = Math.Max(maxX, (x+w));
+                        maxY = Math.Max(maxY, (y+h));
                     }
                 }
-                if (infiniteWidth != 0 && infiniteHeight != 0)
+                //var infiniteWidth = 0;
+                //var infiniteHeight = 0;
+                if (isInfinite)
                 {
-                    tiledLayer.width = infiniteWidth;
-                    tiledLayer.height = infiniteHeight;
-                    tiledLayer.data = new int[tiledLayer.width * tiledLayer.height];
-                    tiledLayer.dataRotationFlags = new byte[tiledLayer.width * tiledLayer.height];
+                    var width = maxX - minX;
+                    var height = maxY - minY;
+                    tiledLayer.width = width;
+                    tiledLayer.height = height;
+                    //tiledLayer.data = new int[tiledLayer.width * tiledLayer.height];
+                    //tiledLayer.dataRotationFlags = new byte[tiledLayer.width * tiledLayer.height];
+                    tiledLayer.data = CreateArray<int>(minX, minY, width, height);
+                    tiledLayer.dataRotationFlags = CreateArray<byte>(minX, minY, width, height);
                 }
 
                 if (encoding == "csv")
                 {
-                    if (infiniteWidth != 0 && infiniteHeight != 0)
+                    if (isInfinite)
                     {
                         foreach (XmlNode child in nodeData.ChildNodes)
                         {
@@ -276,14 +295,14 @@ namespace TiledCS
                     }
                     else
                     {
-                        LoadCsvChunk(nodeData.InnerText, tiledLayer);
+                        LoadCsvChunk(nodeData.InnerText, tiledLayer, 0, 0, tiledLayer.width, tiledLayer.height);
                     }
                 }
                 else if (encoding == "base64")
                 {
                     var compression = nodeData.Attributes["compression"]?.Value;
 
-                    if (infiniteWidth != 0 && infiniteHeight != 0)
+                    if (isInfinite)
                     {
                         foreach (XmlNode child in nodeData.ChildNodes)
                         {
@@ -298,7 +317,7 @@ namespace TiledCS
                     }
                     else
                     {
-                        LoadChunk(nodeData.InnerText, tiledLayer, compression);
+                        LoadChunk(nodeData.InnerText, tiledLayer, compression, 0, 0, tiledLayer.width, tiledLayer.height);
                     }
                 }
                 else
@@ -367,7 +386,7 @@ namespace TiledCS
             return result.ToArray();
         }
 
-        static void LoadCsvChunk(string innerText, TiledLayer tiledLayer, int x = 0, int y = 0, int width = 0, int height = 0) {
+        static void LoadCsvChunk(string innerText, TiledLayer tiledLayer, int x, int y, int width, int height) {
             var csvs = innerText.Split(',');
             if (csvs.Length == 1 && string.IsNullOrWhiteSpace(csvs[0])) {
                 csvs = new string[0];
@@ -392,7 +411,7 @@ namespace TiledCS
             AddChunk(tiledLayer, layerDataList, dataRotationFlagsList, x, y, width, height);
         }
 
-        static void LoadChunk(string innerText, TiledLayer tiledLayer, string compression, int x = 0, int y = 0, int width = 0, int height = 0)
+        static void LoadChunk(string innerText, TiledLayer tiledLayer, string compression, int x, int y, int width, int height)
         {
             using (var base64DataStream = new MemoryStream(Convert.FromBase64String(innerText)))
             {
@@ -400,8 +419,8 @@ namespace TiledCS
                 {
                     // Parse the decoded bytes and update the inner data as well as the data rotation flags
                     var rawBytes = new byte[4];
-                    tiledLayer.data = new int[base64DataStream.Length];
-                    tiledLayer.dataRotationFlags = new byte[base64DataStream.Length];
+                    tiledLayer.data = CreateArray<int>(x, y, width, height);
+                    tiledLayer.dataRotationFlags = CreateArray<byte>(x, y, width, height);
 
                     for (var i = 0; i < base64DataStream.Length; i++)
                     {
@@ -410,10 +429,10 @@ namespace TiledCS
                         var hor = ((rawID & FLIPPED_HORIZONTALLY_FLAG));
                         var ver = ((rawID & FLIPPED_VERTICALLY_FLAG));
                         var dia = ((rawID & FLIPPED_DIAGONALLY_FLAG));
-                        tiledLayer.dataRotationFlags[i] = (byte)((hor | ver | dia) >> SHIFT_FLIP_FLAG_TO_BYTE);
+                        tiledLayer.dataRotationFlags[i%width, i/width] = (byte)((hor | ver | dia) >> SHIFT_FLIP_FLAG_TO_BYTE);
 
                         // assign data to rawID with the rotation flags cleared
-                        tiledLayer.data[i] = (int)(rawID & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG));
+                        tiledLayer.data[i % width, i / width] = (int)(rawID & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG));
                     }
                 }
                 else if (compression == "zlib")
@@ -478,24 +497,29 @@ namespace TiledCS
             }
         }
 
-        static void AddChunk(TiledLayer layer, List<int> data, List<byte> rotationFlags, int xOffset = 0, int yOffset = 0, int width = 0, int height = 0)
+        static void AddChunk(TiledLayer layer, List<int> data, List<byte> rotationFlags, int xOffset, int yOffset, int width, int height)
         {
-            if (xOffset == 0 && yOffset == 0 && width == 0 && height == 0)
-            {
-                layer.data = data.ToArray();
-                layer.dataRotationFlags = rotationFlags.ToArray();
-            }
-            else
-            {
-                // There's much faster ways to do this, but iterating the values is the simplist.
-                for (int x = 0; x < width; x++)
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        layer.data[x + xOffset + ((y + yOffset) * layer.width)] = data[x + (y * width)];
-                        layer.dataRotationFlags[x + xOffset + ((y + yOffset) * layer.width)] = rotationFlags[x + (y * width)];
-                    }
-                }
+            //if (xOffset == 0 && yOffset == 0 && width == 0 && height == 0)
+            //{
+            //    layer.data = data.ToArray();
+            //    layer.dataRotationFlags = rotationFlags.ToArray();
+            //}
+            //else
+            //{
+                //// There's much faster ways to do this, but iterating the values is the simplest.
+                //for (int x = 0; x < width; x++)
+                //{
+                //    for (int y = 0; y < height; y++)
+                //    {
+                //        layer.data[x + xOffset + ((y + yOffset) * layer.width)] = data[x + (y * width)];
+                //        layer.dataRotationFlags[x + xOffset + ((y + yOffset) * layer.width)] = rotationFlags[x + (y * width)];
+                //    }
+                //}
+            //}
+
+            for (var i=0; i < data.Count; ++i) {
+                layer.data[xOffset + i % width, yOffset + i / width] = data[i];
+                layer.dataRotationFlags[xOffset + i % width, yOffset + i / width] = rotationFlags[i];
             }
         }
 
@@ -772,17 +796,7 @@ namespace TiledCS
         /// <returns>True if the tile was flipped horizontally or False if not</returns>
         public bool IsTileFlippedHorizontal(TiledLayer layer, int tileHor, int tileVert)
         {
-            return IsTileFlippedHorizontal(layer, tileHor + (tileVert * layer.width));
-        }
-        /// <summary>
-        /// Checks is a tile is flipped horizontally
-        /// </summary>
-        /// <param name="layer">An entry of the TiledMap.layers array</param>
-        /// <param name="dataIndex">An index of the TiledLayer.data array</param>
-        /// <returns>True if the tile was flipped horizontally or False if not</returns>
-        public bool IsTileFlippedHorizontal(TiledLayer layer, int dataIndex)
-        {
-            return IsTileFlippedHorizontal(layer.dataRotationFlags[dataIndex]);
+            return IsTileFlippedHorizontal(layer.dataRotationFlags[tileHor, tileVert]);
         }
         /// <summary>
         /// Checks is a tile is flipped horizontally
@@ -801,17 +815,7 @@ namespace TiledCS
         /// <returns>True if the tile was flipped vertically or False if not</returns>
         public bool IsTileFlippedVertical(TiledLayer layer, int tileHor, int tileVert)
         {
-            return IsTileFlippedVertical(layer, tileHor + (tileVert * layer.width));
-        }
-        /// <summary>
-        /// Checks is a tile is flipped vertically
-        /// </summary>
-        /// <param name="layer">An entry of the TiledMap.layers array</param>
-        /// <param name="dataIndex">An index of the TiledLayer.data array</param>
-        /// <returns>True if the tile was flipped vertically or False if not</returns>
-        public bool IsTileFlippedVertical(TiledLayer layer, int dataIndex)
-        {
-            return IsTileFlippedVertical(layer.dataRotationFlags[dataIndex]);
+            return IsTileFlippedVertical(layer.dataRotationFlags[tileHor, tileVert]);
         }
         /// <summary>
         /// Checks is a tile is flipped vertically
@@ -830,17 +834,7 @@ namespace TiledCS
         /// <returns>True if the tile was flipped diagonally or False if not</returns>
         public bool IsTileFlippedDiagonal(TiledLayer layer, int tileHor, int tileVert)
         {
-            return IsTileFlippedDiagonal(layer, tileHor + (tileVert * layer.width));
-        }
-        /// <summary>
-        /// Checks is a tile is flipped diagonally
-        /// </summary>
-        /// <param name="layer">An entry of the TiledMap.layers array</param>
-        /// <param name="dataIndex">An index of the TiledLayer.data array</param>
-        /// <returns>True if the tile was flipped diagonally or False if not</returns>
-        public bool IsTileFlippedDiagonal(TiledLayer layer, int dataIndex)
-        {
-            return IsTileFlippedDiagonal(layer.dataRotationFlags[dataIndex]);
+            return IsTileFlippedDiagonal(layer.dataRotationFlags[tileHor, tileVert]);
         }
         /// <summary>
         /// Checks is a tile is flipped diagonally
